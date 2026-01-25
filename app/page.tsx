@@ -51,6 +51,7 @@ export default function Home() {
       const mergedFilters: SearchFilters = {
         ...filters,
         make: parsedFilters.make || filters.make,
+        model: parsedFilters.model || filters.model, // CRITICAL: Include model filter!
         bodyType: parsedFilters.bodyType || filters.bodyType,
         budgetMax: parsedFilters.budgetMax || filters.budgetMax,
         budgetMin: parsedFilters.budgetMin || filters.budgetMin,
@@ -61,6 +62,10 @@ export default function Home() {
         drivetrain: parsedFilters.drivetrain || filters.drivetrain,
         fuelType: parsedFilters.fuelType || filters.fuelType,
         transmission: parsedFilters.transmission || filters.transmission,
+        seats: parsedFilters.seats || filters.seats,
+        features: parsedFilters.features || filters.features,
+        yearMin: parsedFilters.yearMin || filters.yearMin,
+        yearMax: parsedFilters.yearMax || filters.yearMax,
         queryText: searchQuery,
       };
 
@@ -277,15 +282,82 @@ export default function Home() {
                   />
                 </>
               ) : (
-                <EmptyState
-                  title="No cars found"
-                  description="Try adjusting your search or filters to find more results."
-                  action={
-                    <Button variant="outline" onClick={handleClearFilters}>
-                      Clear Filters
-                    </Button>
-                  }
-                />
+                // Show alternatives if available, otherwise show empty state
+                (results.alternatives?.best_available && results.alternatives.best_available.length > 0) ||
+                (results.alternatives?.comparables && results.alternatives.comparables.length > 0) ||
+                (results.alternatives?.nearby_deals && results.alternatives.nearby_deals.length > 0) ? (
+                  <>
+                    <div className="mb-4">
+                      <p className="text-sm text-muted-foreground mb-2">
+                        No exact matches found. Here are some alternatives:
+                      </p>
+                    </div>
+                    {results.alternatives.best_available && results.alternatives.best_available.length > 0 && (
+                      <div className="mb-6">
+                        <h3 className="text-lg font-semibold mb-3">Best Available Options</h3>
+                        <VehicleGrid
+                          results={results.alternatives.best_available.map(item => ({
+                            car: item.car,
+                            score: 0.5,
+                            reasons: [item.reason],
+                            semantic_score: 0.3,
+                            constraint_score: 0.3,
+                            personal_score: 0.3,
+                            inventory_score: 0.3,
+                          }))}
+                          onFavorite={handleFavorite}
+                          favoritedIds={favoritedIds}
+                        />
+                      </div>
+                    )}
+                    {results.alternatives.comparables && results.alternatives.comparables.length > 0 && (
+                      <div className="mb-6">
+                        <h3 className="text-lg font-semibold mb-3">Similar Cars</h3>
+                        <VehicleGrid
+                          results={results.alternatives.comparables.map(item => ({
+                            car: item.car,
+                            score: 0.5,
+                            reasons: [item.similarity_reason],
+                            semantic_score: 0.3,
+                            constraint_score: 0.3,
+                            personal_score: 0.3,
+                            inventory_score: 0.3,
+                          }))}
+                          onFavorite={handleFavorite}
+                          favoritedIds={favoritedIds}
+                        />
+                      </div>
+                    )}
+                    {results.alternatives.nearby_deals && results.alternatives.nearby_deals.length > 0 && (
+                      <div className="mb-6">
+                        <h3 className="text-lg font-semibold mb-3">Nearby Deals</h3>
+                        <VehicleGrid
+                          results={results.alternatives.nearby_deals.map(item => ({
+                            car: item.car,
+                            score: 0.5,
+                            reasons: [item.reason],
+                            semantic_score: 0.3,
+                            constraint_score: 0.3,
+                            personal_score: 0.3,
+                            inventory_score: 0.3,
+                          }))}
+                          onFavorite={handleFavorite}
+                          favoritedIds={favoritedIds}
+                        />
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <EmptyState
+                    title="No cars found"
+                    description="Try adjusting your search or filters to find more results."
+                    action={
+                      <Button variant="outline" onClick={handleClearFilters}>
+                        Clear Filters
+                      </Button>
+                    }
+                  />
+                )
               )
             ) : (
               <EmptyState

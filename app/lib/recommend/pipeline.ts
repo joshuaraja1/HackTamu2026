@@ -178,10 +178,11 @@ async function getCarsWithFilters(filters: SearchFilters, limit: number = 100000
         console.log('[getCarsWithFilters] Filtering by make:', filters.make);
       }
       if (filters.model && filters.model.length > 0) {
-        // Filter by model (case-insensitive) - use ilike for each model
-        // Note: Supabase doesn't support complex OR with multiple columns easily, so we'll filter in memory
-        console.log('[getCarsWithFilters] Will filter by model in memory:', filters.model);
-        // We'll apply model filter later in memory after fetching
+        // Model is a HARD constraint - filter at database level if possible
+        // Since Supabase doesn't easily support OR with multiple ilike, we'll filter in memory
+        // But we log it clearly that model is a hard constraint that will never be relaxed
+        console.log('[getCarsWithFilters] Model filter (HARD CONSTRAINT - will filter in memory):', filters.model);
+        // We'll apply strict model filter later in memory after fetching
       }
       if (filters.yearMin) {
         vehicleQuery = vehicleQuery.gte('year', filters.yearMin);
@@ -190,7 +191,9 @@ async function getCarsWithFilters(filters: SearchFilters, limit: number = 100000
         vehicleQuery = vehicleQuery.lte('year', filters.yearMax);
       }
       if (filters.fuelType && filters.fuelType.length > 0) {
-        vehicleQuery = vehicleQuery.in('fuel_type', filters.fuelType);
+        // Fuel type filtering will be done in-memory for case-insensitive matching
+        // The database might have "Hybrid" but filter is "hybrid", so we filter in memory
+        console.log('[getCarsWithFilters] Will filter by fuel type in memory:', filters.fuelType);
       }
       if (filters.transmission && filters.transmission.length > 0) {
         // Filter by transmission (case-insensitive) - filter in memory
@@ -601,9 +604,44 @@ async function getCarsWithFilters(filters: SearchFilters, limit: number = 100000
       return car !== null;
     })
     .filter((car: Car) => {
-      // STRICT filtering - all criteria must match exactly
+      // PRIORITY-BASED filtering:
+      // 1. Model/Make are PRIMARY (hard constraints) - always enforced
+      // 2. Other filters are SECONDARY - can be relaxed if model is specified
       
-      // Year must be within range (if specified)
+      // PRIMARY: Model must match EXACTLY (if specified) - this is ALWAYS a hard constraint
+      if (filters.model && filters.model.length > 0) {
+        const carModel = car.model?.toLowerCase().trim() || '';
+        const carTrim = car.trim?.toLowerCase().trim() || '';
+        const filterModels = filters.model.map(m => m.toLowerCase().trim());
+        
+        // STRICT matching: model must exactly match or be contained as a whole word
+        const matchesModel = filterModels.some(filterModel => {
+          if (carModel === filterModel) return true;
+          const modelWords = carModel.split(/\s+/);
+          if (modelWords.includes(filterModel)) return true;
+          const filterWords = filterModel.split(/\s+/);
+          if (filterWords.includes(carModel)) return true;
+          if (carTrim && (carTrim === filterModel || carTrim.includes(filterModel) || filterModel.includes(carTrim))) {
+            return true;
+          }
+          return false;
+        });
+        
+        if (!matchesModel) {
+          return false; // Model is hard constraint - reject immediately
+        }
+      }
+      
+      // PRIMARY: Make must match (if specified) - check this early
+      if (filters.make && filters.make.length > 0) {
+        const carMake = car.make?.toLowerCase();
+        const filterMakes = filters.make.map(m => m.toLowerCase());
+        if (!carMake || !filterMakes.includes(carMake)) {
+          return false;
+        }
+      }
+      
+      // SECONDARY: Year must be within range (if specified)
       if (filters.yearMin && car.year < filters.yearMin) {
         return false;
       }
@@ -611,29 +649,17 @@ async function getCarsWithFilters(filters: SearchFilters, limit: number = 100000
         return false;
       }
       
-      // Drivetrain must match exactly (case-insensitive)
-      if (filters.drivetrain && filters.drivetrain.length > 0) {
-        const carDrivetrain = car.drivetrain?.toLowerCase() || '';
-        const filterDrivetrains = filters.drivetrain.map(d => d.toLowerCase());
-        // Check if user wants AWD/4WD
-        const wantsAWD = filterDrivetrains.includes('awd') || filterDrivetrains.includes('4wd');
-        // Car drivetrain should already be normalized to 'awd' during mapping, but double-check
-        const isAWD = carDrivetrain === 'awd' || carDrivetrain === '4wd';
-        
-        if (wantsAWD) {
-          // User wants AWD - car must be AWD
-          if (!isAWD) {
-            return false;
-          }
-        } else {
-          // User wants specific drivetrain - must match exactly
-          if (!carDrivetrain || !filterDrivetrains.includes(carDrivetrain)) {
-            return false;
-          }
-        }
+      // SECONDARY: Price must be strictly under budgetMax (if specified)
+      if (filters.budgetMax && car.price_cents > filters.budgetMax) {
+        return false;
       }
       
-      // Body type must match exactly
+      // SECONDARY: Price must be at least budgetMin (if specified)
+      if (filters.budgetMin && car.price_cents < filters.budgetMin) {
+        return false;
+      }
+      
+      // SECONDARY: Body type must match exactly
       if (filters.bodyType && filters.bodyType.length > 0) {
         const carBodyType = car.body_type?.toLowerCase();
         const filterBodyTypes = filters.bodyType.map(b => b.toLowerCase());
@@ -642,40 +668,25 @@ async function getCarsWithFilters(filters: SearchFilters, limit: number = 100000
         }
       }
       
-      // Price must be strictly under budgetMax (if specified)
-      if (filters.budgetMax && car.price_cents > filters.budgetMax) {
-        return false;
-      }
+      // SECONDARY: Drivetrain - will be handled separately if model is specified
+      // (We'll apply this filter, but if no results, we'll relax it while keeping model)
       
-      // Price must be at least budgetMin (if specified)
-      if (filters.budgetMin && car.price_cents < filters.budgetMin) {
-        return false;
-      }
-      
-      // Model must match (if specified) - be flexible with matching
-      if (filters.model && filters.model.length > 0) {
-        const carModel = car.model?.toLowerCase() || '';
-        const carTrim = car.trim?.toLowerCase() || '';
-        const filterModels = filters.model.map(m => m.toLowerCase());
-        // Check if any filter model is contained in car model or trim (or vice versa)
-        const matchesModel = filterModels.some(m => 
-          carModel.includes(m) || m.includes(carModel) || 
-          carModel.replace(/\s+/g, '').includes(m.replace(/\s+/g, ''))
-        );
-        const matchesTrim = filterModels.some(m => 
-          carTrim.includes(m) || m.includes(carTrim) ||
-          carTrim.replace(/\s+/g, '').includes(m.replace(/\s+/g, ''))
-        );
-        if (!matchesModel && !matchesTrim) {
-          return false;
-        }
-      }
+      // SECONDARY: Fuel type, transmission, seats, features - all secondary
       
       // Transmission must match (if specified)
       if (filters.transmission && filters.transmission.length > 0) {
         const carTransmission = car.transmission?.toLowerCase();
         const filterTransmissions = filters.transmission.map(t => t.toLowerCase());
         if (!carTransmission || !filterTransmissions.includes(carTransmission)) {
+          return false;
+        }
+      }
+      
+      // Fuel type must match exactly (case-insensitive)
+      if (filters.fuelType && filters.fuelType.length > 0) {
+        const carFuelType = car.fuel_type?.toLowerCase() || '';
+        const filterFuelTypes = filters.fuelType.map(f => f.toLowerCase());
+        if (!carFuelType || !filterFuelTypes.includes(carFuelType)) {
           return false;
         }
       }
@@ -703,7 +714,70 @@ async function getCarsWithFilters(filters: SearchFilters, limit: number = 100000
       return true;
     });
 
-  console.log(`[getCarsWithFilters] Found ${cars.length} cars after mapping and filtering`);
+  console.log(`[getCarsWithFilters] Found ${cars.length} cars after primary filtering (model/make/year/price/body)`);
+  
+  // PRIORITY LOGIC: If model is specified, apply drivetrain filter with fallback
+  // First try with drivetrain filter, if no results, relax drivetrain but keep model
+  if (filters.model && filters.model.length > 0 && filters.drivetrain && filters.drivetrain.length > 0) {
+    const beforeDrivetrainFilter = cars.length;
+    const carsWithDrivetrain = cars.filter(car => {
+      const carDrivetrain = car.drivetrain?.toLowerCase() || '';
+      const filterDrivetrains = filters.drivetrain!.map(d => d.toLowerCase());
+      const wantsAWD = filterDrivetrains.includes('awd') || filterDrivetrains.includes('4wd');
+      const isAWD = carDrivetrain === 'awd' || carDrivetrain === '4wd';
+      
+      if (wantsAWD) {
+        return isAWD;
+      } else {
+        return carDrivetrain && filterDrivetrains.includes(carDrivetrain);
+      }
+    });
+    
+    console.log(`[getCarsWithFilters] Model + Drivetrain filter: ${beforeDrivetrainFilter} -> ${carsWithDrivetrain.length} cars`);
+    
+    // If we have results with drivetrain filter, use them
+    // If no results, keep all cars (model match but drivetrain relaxed)
+    if (carsWithDrivetrain.length > 0) {
+      cars = carsWithDrivetrain;
+      console.log(`[getCarsWithFilters] ✅ Using ${cars.length} cars matching model + drivetrain`);
+    } else {
+      console.log(`[getCarsWithFilters] ⚠️ No cars match model + drivetrain. Keeping ${cars.length} cars matching model (drivetrain relaxed)`);
+      // cars already filtered by model, so we keep them (drivetrain is relaxed)
+    }
+  } else if (filters.drivetrain && filters.drivetrain.length > 0) {
+    // If no model specified, apply drivetrain filter normally
+    const beforeDrivetrainFilter = cars.length;
+    cars = cars.filter(car => {
+      const carDrivetrain = car.drivetrain?.toLowerCase() || '';
+      const filterDrivetrains = filters.drivetrain!.map(d => d.toLowerCase());
+      const wantsAWD = filterDrivetrains.includes('awd') || filterDrivetrains.includes('4wd');
+      const isAWD = carDrivetrain === 'awd' || carDrivetrain === '4wd';
+      
+      if (wantsAWD) {
+        return isAWD;
+      } else {
+        return carDrivetrain && filterDrivetrains.includes(carDrivetrain);
+      }
+    });
+    console.log(`[getCarsWithFilters] Drivetrain filter (no model): ${beforeDrivetrainFilter} -> ${cars.length} cars`);
+  }
+  
+  console.log(`[getCarsWithFilters] Applied filters:`, {
+    make: filters.make,
+    model: filters.model,
+    bodyType: filters.bodyType,
+    yearMin: filters.yearMin,
+    yearMax: filters.yearMax,
+    budgetMin: filters.budgetMin,
+    budgetMax: filters.budgetMax,
+    drivetrain: filters.drivetrain,
+    fuelType: filters.fuelType,
+    transmission: filters.transmission,
+    seats: filters.seats,
+    features: filters.features,
+    city: filters.city,
+    radiusMiles: filters.radiusMiles,
+  });
 
   // Filter by city name if provided (STRICT - only show cars from that city)
   if (filters.city) {
@@ -905,9 +979,14 @@ export async function recommendCars(
   }
 
   // Stage 0: Initial search with strict filters
+  console.log('[recommendCars] Starting Stage 0 with filters:', JSON.stringify(currentFilters, null, 2));
   let cars: Car[] = await getCarsWithFilters(currentFilters, 10000);
   console.log(`[recommendCars] Stage 0: Found ${cars.length} cars after initial filtering`);
   stageCounts['stage_0'] = cars.length;
+  
+  if (cars.length === 0) {
+    console.warn('[recommendCars] ⚠️ Stage 0 returned 0 cars - will attempt relaxation');
+  }
   
   // If we have a query embedding, re-rank by semantic similarity
   if (queryEmbedding && cars.length > 0) {
@@ -1086,7 +1165,28 @@ export async function recommendCars(
   // If we have zero results, show best available (top cars in area)
   if (topResults.length === 0) {
     try {
-      const allCarsPool = await getCarsWithFilters({}, 100);
+      console.log('[recommendCars] Zero results - fetching best available cars with minimal filters');
+      // Try with minimal filters first (just location if specified)
+      const minimalFilters: SearchFilters = {};
+      if (currentFilters.latitude && currentFilters.longitude) {
+        minimalFilters.latitude = currentFilters.latitude;
+        minimalFilters.longitude = currentFilters.longitude;
+        minimalFilters.radiusMiles = (currentFilters.radiusMiles || 15) * 5; // Much wider radius
+      }
+      if (currentFilters.city) {
+        minimalFilters.city = currentFilters.city;
+      }
+      
+      let allCarsPool = await getCarsWithFilters(minimalFilters, 500);
+      console.log(`[recommendCars] Best available pool: ${allCarsPool.length} cars with minimal filters`);
+      
+      // If still no results, try with completely empty filters
+      if (allCarsPool.length === 0) {
+        console.log('[recommendCars] No cars with minimal filters - trying completely empty filters');
+        allCarsPool = await getCarsWithFilters({}, 500);
+        console.log(`[recommendCars] Best available pool (empty filters): ${allCarsPool.length} cars`);
+      }
+      
       // Sort by price (ascending) and take top 10 as "best available"
       const bestAvailable = allCarsPool
         .filter(c => c.is_available)
@@ -1098,6 +1198,33 @@ export async function recommendCars(
         }));
       alternatives.best_available = bestAvailable;
       console.log(`[recommendCars] Found ${bestAvailable.length} best available cars`);
+      
+      // If we still have no results, return the best available as main results
+      if (topResults.length === 0 && bestAvailable.length > 0) {
+        console.log('[recommendCars] Returning best available as main results since no matches found');
+        return {
+          results: bestAvailable.map(item => ({
+            car: item.car,
+            score: 0.5,
+            reasons: [item.reason],
+            semantic_score: 0.3,
+            constraint_score: 0.3,
+            personal_score: 0.3,
+            inventory_score: 0.3,
+          })),
+          relaxation_applied: allRelaxations,
+          alternatives: {
+            comparables: [],
+            nearby_deals: [],
+            best_available: [],
+          },
+          debug: {
+            stage_counts: stageCounts,
+            top_signals: ['No exact matches found - showing best available'],
+            final_stage: `stage_${relaxationStage}`,
+          },
+        };
+      }
     } catch (error) {
       console.warn('[recommendCars] Error finding best available:', error);
     }

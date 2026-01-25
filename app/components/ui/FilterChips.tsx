@@ -67,19 +67,23 @@ export default function FilterChips({
     });
   }
 
-  if (filters.drivetrain) {
-    activeFilters.push({
-      key: 'drivetrain',
-      label: `Drivetrain: ${filters.drivetrain.toUpperCase()}`,
-      value: filters.drivetrain,
+  if (filters.drivetrain && filters.drivetrain.length > 0) {
+    filters.drivetrain.forEach((dt) => {
+      activeFilters.push({
+        key: 'drivetrain',
+        label: `Drivetrain: ${dt.toUpperCase()}`,
+        value: dt,
+      });
     });
   }
 
-  if (filters.fuelType) {
-    activeFilters.push({
-      key: 'fuelType',
-      label: `Fuel: ${filters.fuelType}`,
-      value: filters.fuelType,
+  if (filters.fuelType && filters.fuelType.length > 0) {
+    filters.fuelType.forEach((ft) => {
+      activeFilters.push({
+        key: 'fuelType',
+        label: `Fuel: ${ft}`,
+        value: ft,
+      });
     });
   }
 
