@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabaseClient } from '@/app/lib/supabaseClient';
 import type { Car } from '@/app/lib/recommend/types';
+import TestDriveChat from '@/app/components/TestDriveChat';
 
 export default function CarDetailPage() {
   const params = useParams();
@@ -13,6 +14,7 @@ export default function CarDetailPage() {
   const [car, setCar] = useState<Car | null>(null);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | undefined>();
+  const [showChatbot, setShowChatbot] = useState(false);
 
   useEffect(() => {
     if (!supabaseClient) {
@@ -353,20 +355,28 @@ export default function CarDetailPage() {
 
           <div className="flex gap-4">
             <button
-              onClick={handlePurchase}
-              className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              onClick={() => setShowChatbot(true)}
+              className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold"
             >
-              Purchase (Demo)
+              Book a Test Drive
             </button>
             <Link
               href="/"
-              className="px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
+              className="px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
             >
               Continue Shopping
             </Link>
           </div>
         </div>
       </div>
+
+      {/* Test Drive Chatbot */}
+      {showChatbot && (
+        <TestDriveChat
+          carName={`${car.year} ${car.make} ${car.model}${car.trim ? ` ${car.trim}` : ''}`}
+          onClose={() => setShowChatbot(false)}
+        />
+      )}
     </div>
   );
 }
