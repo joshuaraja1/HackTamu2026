@@ -76,6 +76,13 @@ Edit `.env.local` with your Supabase credentials:
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+
+# Resend Email API (for test drive confirmations)
+# Get your API key from https://resend.com/api-keys
+RESEND_API_KEY=re_your_api_key_here
+# For testing, use onboarding@resend.dev (works immediately)
+# For production, use your verified domain
+RESEND_FROM_EMAIL=Car Marketplace <onboarding@resend.dev>
 ```
 
 ### 5. Run Database Migrations
