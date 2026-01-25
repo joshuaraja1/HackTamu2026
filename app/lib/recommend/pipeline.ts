@@ -17,9 +17,10 @@ import {
 } from './scoring';
 import { applyRelaxation } from './relaxation';
 import { findComparables, findNearbyDeals } from './comparables';
+import { expandQuery, generateQueryVariations } from './queryExpansion';
 
-const TARGET_RESULTS = 100000; // Show all results
-const MIN_RESULTS = 0; // No minimum required
+const TARGET_RESULTS = 20; // Target number of results
+const MIN_RESULTS = 8; // Minimum results before triggering fallbacks
 
 /**
  * Get user profile and preference vector
@@ -52,6 +53,8 @@ async function semanticSearch(
   filters: SearchFilters,
   limit: number = 100
 ): Promise<Car[]> {
+  if (!supabaseAdmin) return [];
+  
   // Build base query
   let query = supabaseAdmin
     .from('cars')
@@ -124,6 +127,11 @@ async function getCarsWithFilters(filters: SearchFilters, limit: number = 100000
   });
 
   // Quick test: verify database has data
+  if (!supabaseAdmin) {
+    console.error('[getCarsWithFilters] supabaseAdmin is not initialized');
+    return [];
+  }
+  
   try {
     const { count: listingCount } = await supabaseAdmin
       .from('listings')
@@ -777,7 +785,7 @@ async function countSimilarCarsInArea(
   userLat?: number,
   userLon?: number
 ): Promise<number> {
-  if (!userLat || !userLon) return 1;
+  if (!userLat || !userLon || !supabaseAdmin) return 1;
 
   // Get vehicle IDs for same make/model
   const { data: vehicles } = await supabaseAdmin
@@ -869,20 +877,26 @@ export async function recommendCars(
   try {
     const allRelaxations: any[] = [];
     let currentFilters = { ...filters };
-    let stage = 0;
+    let relaxationStage = 0; // Track relaxation stage for progressive constraint relaxation
     const stageCounts: Record<string, number> = {};
 
     // Get user profile
     const { profile: userProfile, preferenceVector } = await getUserProfile(userId);
 
-  // Generate query embedding if query text provided
-  // Use hashed fallback to avoid sharp module issues (no external deps)
-  let queryEmbedding: number[] | null = null;
+  // Query Expansion: Expand query with synonyms and related terms
+  let expandedQueries: string[] = [];
   if (filters.queryText) {
+    expandedQueries = expandQuery(filters.queryText);
+    console.log(`[recommendCars] Query expansion: ${expandedQueries.length} query variations`);
+  }
+
+  // Generate query embedding(s) - use best expanded query or original
+  let queryEmbedding: number[] | null = null;
+  const queryToEmbed = expandedQueries.length > 0 ? expandedQueries[0] : filters.queryText;
+  if (queryToEmbed) {
     try {
-      // Use hashed embedding from utils (no external deps, no sharp)
       const { generateHashedEmbedding } = await import('./utils');
-      queryEmbedding = generateHashedEmbedding(filters.queryText);
+      queryEmbedding = generateHashedEmbedding(queryToEmbed);
       console.log('[recommendCars] Generated hashed query embedding');
     } catch (error: any) {
       console.warn('[recommendCars] Failed to generate embedding, continuing without semantic search:', error?.message || error);
@@ -890,36 +904,57 @@ export async function recommendCars(
     }
   }
 
-  // Stage 0: Initial search
-  // Always use getCarsWithFilters to ensure filters are properly applied
-  // Semantic search is used for ranking, but we filter first
-  // Fetch ALL matching cars (no limit)
-  let cars: Car[] = await getCarsWithFilters(currentFilters, 100000);
+  // Stage 0: Initial search with strict filters
+  let cars: Car[] = await getCarsWithFilters(currentFilters, 10000);
   console.log(`[recommendCars] Stage 0: Found ${cars.length} cars after initial filtering`);
+  stageCounts['stage_0'] = cars.length;
   
   // If we have a query embedding, re-rank by semantic similarity
   if (queryEmbedding && cars.length > 0) {
-    // Score cars by semantic similarity
     const scoredCars = cars.map(car => {
       if (car.embedding && car.embedding.length > 0) {
         const similarity = cosineSimilarity(queryEmbedding, car.embedding);
         return { car, similarity };
       }
-      // Give cars without embeddings a neutral score so they're not excluded
       return { car, similarity: 0.3 };
     });
-    
-    // Sort by similarity - keep ALL results (no limit)
     scoredCars.sort((a, b) => b.similarity - a.similarity);
     cars = scoredCars.map(item => item.car);
     console.log(`[recommendCars] After semantic re-ranking: ${cars.length} cars`);
   }
 
-  stageCounts['stage_0'] = cars.length;
-
-  // STRICT MODE: No relaxation - only show exact matches
-  // If no results, return empty (user will see "No cars found")
-  console.log(`[recommendCars] Strict filtering mode - returning ${cars.length} exact matches only`);
+  // Progressive Relaxation: If results < MIN_RESULTS, relax constraints
+  while (cars.length < MIN_RESULTS && relaxationStage < 6) {
+    relaxationStage++;
+    const { filters: relaxedFilters, relaxations } = applyRelaxation(currentFilters, relaxationStage);
+    
+    if (relaxations.length === 0) {
+      // No more relaxations possible
+      break;
+    }
+    
+    allRelaxations.push(...relaxations);
+    currentFilters = relaxedFilters;
+    
+    console.log(`[recommendCars] Stage ${relaxationStage}: Relaxing constraints, relaxations:`, relaxations);
+    
+    // Re-search with relaxed filters
+    cars = await getCarsWithFilters(currentFilters, 10000);
+    stageCounts[`stage_${relaxationStage}`] = cars.length;
+    console.log(`[recommendCars] Stage ${relaxationStage}: Found ${cars.length} cars after relaxation`);
+    
+    // Re-rank if we have query embedding
+    if (queryEmbedding && cars.length > 0) {
+      const scoredCars = cars.map(car => {
+        if (car.embedding && car.embedding.length > 0) {
+          return { car, similarity: cosineSimilarity(queryEmbedding, car.embedding) };
+        }
+        return { car, similarity: 0.3 };
+      });
+      scoredCars.sort((a, b) => b.similarity - a.similarity);
+      cars = scoredCars.map(item => item.car);
+    }
+  }
 
   // Score and rank cars
   const scoredCars: Array<RecommendationResult & { rawCar: Car }> = [];
@@ -987,27 +1022,97 @@ export async function recommendCars(
   
   console.log(`[recommendCars] Scored ${scoredCars.length} cars, top 3 scores:`, scoredCars.slice(0, 3).map(s => s.score));
 
-  // Return ALL results (no limit) - user wants to see all matching cars
-  const topResults = scoredCars.map(({ rawCar, ...rest }) => rest);
-  console.log(`[recommendCars] Returning ${topResults.length} results (all matching cars)`);
+  // Take top TARGET_RESULTS
+  const topResults = scoredCars.slice(0, TARGET_RESULTS).map(({ rawCar, ...rest }) => rest);
+  console.log(`[recommendCars] Returning ${topResults.length} top results`);
 
-  // STRICT MODE: No alternatives - only show exact matches
+  // Zero-Match Fallbacks: Generate alternatives if we have few results
   const alternatives: RecommendationResponse['alternatives'] = {
     comparables: [],
     nearby_deals: [],
     best_available: [],
   };
 
-    return {
-      results: topResults,
-      relaxation_applied: allRelaxations,
-      alternatives,
-      debug: {
-        stage_counts: stageCounts,
-        top_signals: topResults.slice(0, 3).map(r => r.reasons[0] || 'No reason'),
-        final_stage: `stage_${stage}`,
-      },
-    };
+  // If we have results but less than MIN_RESULTS, or if we have a specific car in mind, find comparables
+  if (topResults.length > 0 && topResults.length < MIN_RESULTS) {
+    const topCar = topResults[0].car;
+    try {
+      // Get a larger pool of cars for finding comparables (relaxed filters)
+      const relaxedFiltersForComparables = {
+        ...currentFilters,
+        // Remove strict constraints for comparables search
+        budgetMax: currentFilters.budgetMax ? currentFilters.budgetMax * 1.3 : undefined,
+        radiusMiles: (currentFilters.radiusMiles || 50) * 2,
+      };
+      const allCarsPool = await getCarsWithFilters(relaxedFiltersForComparables, 1000);
+      const comparables = findComparables(topCar, allCarsPool, 5);
+      alternatives.comparables = comparables.map(c => ({
+        car: c.car,
+        similarity_reason: c.similarity_reason,
+      }));
+      console.log(`[recommendCars] Found ${comparables.length} comparable cars`);
+    } catch (error) {
+      console.warn('[recommendCars] Error finding comparables:', error);
+    }
+  }
+
+  // If we have very few or no results, find nearby deals
+  if (topResults.length < MIN_RESULTS) {
+    try {
+      // Use relaxed filters for nearby deals
+      const relaxedFiltersForDeals = {
+        ...currentFilters,
+        budgetMax: currentFilters.budgetMax ? currentFilters.budgetMax * 1.5 : undefined,
+        radiusMiles: (currentFilters.radiusMiles || 50) * 3,
+      };
+      const allCarsPool = await getCarsWithFilters(relaxedFiltersForDeals, 1000);
+      const nearbyDeals = findNearbyDeals(
+        allCarsPool,
+        currentFilters.latitude || userProfile?.latitude,
+        currentFilters.longitude || userProfile?.longitude,
+        currentFilters.radiusMiles || 100, // Wider radius for deals
+        5
+      );
+      alternatives.nearby_deals = nearbyDeals.map(d => ({
+        car: d.car,
+        reason: d.reason,
+      }));
+      console.log(`[recommendCars] Found ${nearbyDeals.length} nearby deals`);
+    } catch (error) {
+      console.warn('[recommendCars] Error finding nearby deals:', error);
+    }
+  }
+
+  // If we have zero results, show best available (top cars in area)
+  if (topResults.length === 0) {
+    try {
+      const allCarsPool = await getCarsWithFilters({}, 100);
+      // Sort by price (ascending) and take top 10 as "best available"
+      const bestAvailable = allCarsPool
+        .filter(c => c.is_available)
+        .sort((a, b) => a.price_cents - b.price_cents)
+        .slice(0, 10)
+        .map(car => ({
+          car,
+          reason: 'Best available options in your area',
+        }));
+      alternatives.best_available = bestAvailable;
+      console.log(`[recommendCars] Found ${bestAvailable.length} best available cars`);
+    } catch (error) {
+      console.warn('[recommendCars] Error finding best available:', error);
+    }
+  }
+
+  return {
+    results: topResults,
+    relaxation_applied: allRelaxations,
+    alternatives,
+    debug: {
+      stage_counts: stageCounts,
+      top_signals: topResults.slice(0, 3).map(r => r.reasons[0] || 'No reason'),
+      final_stage: `stage_${relaxationStage}`,
+    },
+  };
   } catch (error: any) {
     const errorMessage = error?.message || String(error);
     const errorStack = error?.stack;
