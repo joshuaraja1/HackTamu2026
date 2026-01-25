@@ -101,11 +101,39 @@ export function calculateConstraintScore(
     factors.push(1.0);
   }
 
-  if (filters.drivetrain && filters.drivetrain.length > 0) {
-    if (!car.drivetrain || !filters.drivetrain.includes(car.drivetrain)) {
-      return 0; // Hard fail - drivetrain doesn't match
+  // Model is a HARD constraint - if specified, must match exactly
+  if (filters.model && filters.model.length > 0) {
+    const carModel = car.model?.toLowerCase().trim() || '';
+    const carTrim = car.trim?.toLowerCase().trim() || '';
+    const filterModels = filters.model.map(m => m.toLowerCase().trim());
+    
+    const matchesModel = filterModels.some(filterModel => {
+      if (carModel === filterModel) return true;
+      const modelWords = carModel.split(/\s+/);
+      if (modelWords.includes(filterModel)) return true;
+      if (carTrim && (carTrim === filterModel || carTrim.includes(filterModel))) return true;
+      return false;
+    });
+    
+    if (!matchesModel) {
+      return 0; // Hard fail - model doesn't match
     }
     factors.push(1.0);
+  }
+
+  // Drivetrain is a SOFT constraint - if model is specified, don't hard fail
+  // This allows showing FWD/RWD Camrys when user searches "Camry AWD" but no AWD Camrys exist
+  if (filters.drivetrain && filters.drivetrain.length > 0) {
+    if (!car.drivetrain || !filters.drivetrain.includes(car.drivetrain)) {
+      // If model is specified, don't hard fail - just give lower score
+      if (filters.model && filters.model.length > 0) {
+        factors.push(0.3); // Lower score but don't exclude
+      } else {
+        return 0; // Hard fail only if model is not specified
+      }
+    } else {
+      factors.push(1.0);
+    }
   }
 
   if (filters.fuelType && filters.fuelType.length > 0) {

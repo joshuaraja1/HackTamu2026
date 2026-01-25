@@ -146,6 +146,13 @@ export function applyRelaxation(
 ): { filters: SearchFilters; relaxations: Relaxation[] } {
   const hardConstraints = currentFilters.hardConstraints || [];
   
+  // NEVER relax model or make - these are always hard constraints
+  // If user searches for "Toyota Camry", we must only show Camrys, not other Toyota models
+  if (currentFilters.model && currentFilters.model.length > 0) {
+    // Model is specified - never relax it, but we can relax other constraints
+    // This ensures "Toyota Camry" only shows Camrys, even if we relax price/radius/year
+  }
+  
   // Never relax hard constraints
   if (stage === 2 || stage === 3) {
     if (isHardConstraint('price', hardConstraints)) {
