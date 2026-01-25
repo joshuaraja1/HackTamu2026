@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useCompare } from '../context/CompareContext';
+import { getCarImageUrl } from '../lib/utils/carImages';
 import {
   BarChart,
   Bar,
@@ -116,7 +117,7 @@ export default function ComparePage() {
           <div className="flex items-center justify-between">
             <div>
               <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                🚗 Car Marketplace
+                🚗 RideIQ
               </Link>
             </div>
             <div className="flex items-center gap-4">
@@ -142,10 +143,29 @@ export default function ComparePage() {
 
         {/* Quick Overview Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-          {compareCars.map((car) => (
+          {compareCars.map((car) => {
+            const imageUrl = getCarImageUrl({
+              make: car.make,
+              model: car.model,
+              year: car.year,
+              body_type: car.body_type,
+            });
+            return (
             <div key={car.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-              <div className="h-32 bg-gradient-to-br from-blue-400 to-indigo-500 rounded mb-3 flex items-center justify-center">
-                <span className="text-4xl opacity-50">🚗</span>
+              <div className="h-32 bg-gradient-to-br from-blue-400 to-indigo-500 rounded mb-3 overflow-hidden relative">
+                <img
+                  src={imageUrl}
+                  alt={`${car.year} ${car.make} ${car.model}`}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    // Show fallback emoji
+                    const fallback = target.nextElementSibling as HTMLElement;
+                    if (fallback) fallback.style.display = 'flex';
+                  }}
+                />
+                <span className="text-4xl opacity-50 absolute inset-0 flex items-center justify-center" style={{ display: 'none' }}>🚗</span>
               </div>
               <h3 className="font-semibold text-sm text-gray-900 mb-1 line-clamp-2">
                 {car.year} {car.make} {car.model}
@@ -163,7 +183,8 @@ export default function ComparePage() {
                 Remove
               </button>
             </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Metrics Comparison Table */}

@@ -3,9 +3,16 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import AppLayout from '@/app/components/layout/AppLayout';
 import { supabaseClient } from '@/app/lib/supabaseClient';
 import type { Car } from '@/app/lib/recommend/types';
 import TestDriveChat from '@/app/components/TestDriveChat';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { MapPin, Calendar, Fuel, Gauge, Users, Settings } from 'lucide-react';
+import { getCarImageUrl, getFallbackCarImageUrl } from '@/app/lib/utils/carImages';
 
 export default function CarDetailPage() {
   const params = useParams();
@@ -30,8 +37,7 @@ export default function CarDetailPage() {
       }
     });
 
-    // Fetch car details from listings and vehicles_master
-    // First, get the listing
+    // Fetch car details
     supabaseClient
       .from('listings')
       .select(`
@@ -147,7 +153,7 @@ export default function CarDetailPage() {
           trim: vehicle.base_model || undefined,
           year: vehicle.year,
           body_type: bodyType,
-          price_cents: listing.price * 100, // Convert dollars to cents
+          price_cents: listing.price * 100,
           mileage: listing.mileage,
           drivetrain: drivetrain || undefined,
           fuel_type: vehicle.fuel_type?.toLowerCase() || undefined,
@@ -166,7 +172,7 @@ export default function CarDetailPage() {
 
         setCar(car);
 
-        // Track view (use userId from state, will be set by auth call)
+        // Track view
         setTimeout(() => {
           if (userId) {
             fetch('/api/track', {
@@ -185,49 +191,36 @@ export default function CarDetailPage() {
       });
   }, [carId, userId]);
 
-  const handlePurchase = async () => {
-    if (!userId) {
-      alert('Please log in to purchase');
-      return;
-    }
-
-    try {
-      await fetch('/api/track', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId,
-          carId,
-          interactionType: 'purchase',
-        }),
-      });
-      alert('Purchase logged! (This is a demo)');
-    } catch (error) {
-      console.error('Purchase error:', error);
-    }
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="mt-2 text-gray-600">Loading...</p>
+      <AppLayout>
+        <div className="container mx-auto px-4 md:px-8 py-8 max-w-7xl">
+          <Skeleton className="h-10 w-32 mb-6" />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <Skeleton className="aspect-video w-full rounded-2xl" />
+            <div className="space-y-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-6 w-2/3" />
+              <Skeleton className="h-32 w-full" />
+            </div>
+          </div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   if (!car) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Car not found</h1>
-          <Link href="/" className="text-blue-600 hover:underline">
-            Back to search
-          </Link>
+      <AppLayout>
+        <div className="container mx-auto px-4 md:px-8 py-8 max-w-7xl">
+          <div className="text-center py-16">
+            <h1 className="text-2xl font-bold mb-4">Car not found</h1>
+            <Link href="/">
+              <Button variant="outline">Back to search</Button>
+            </Link>
+          </div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
@@ -238,134 +231,161 @@ export default function CarDetailPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
-        <Link href="/" className="text-blue-600 hover:underline mb-4 inline-block">
-          ← Back to search
+    <AppLayout>
+      <div className="container mx-auto px-4 md:px-8 py-8 max-w-7xl">
+        <Link href="/">
+          <Button variant="ghost" className="mb-6">
+            ← Back to search
+          </Button>
         </Link>
 
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h1 className="text-3xl font-bold mb-2">
-            {car.year} {car.make} {car.model} {car.trim && car.trim}
-          </h1>
-          <p className="text-xl text-gray-600 mb-6">
-            {car.body_type} • {car.mileage.toLocaleString()} miles
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div>
-              <h2 className="text-2xl font-bold mb-4">{price}</h2>
-              <div className="space-y-2">
-                <div>
-                  <strong>Location:</strong> {car.city}, {car.state}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Image Gallery */}
+            <Card>
+              <div className="relative aspect-video bg-gradient-to-br from-primary/20 via-primary/10 to-muted rounded-t-lg overflow-hidden">
+                <img
+                  src={getCarImageUrl({
+                    make: car.make,
+                    model: car.model,
+                    year: car.year,
+                    body_type: car.body_type,
+                  })}
+                  alt={`${car.year} ${car.make} ${car.model}`}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    if (target.src !== getFallbackCarImageUrl()) {
+                      target.src = getFallbackCarImageUrl();
+                    } else {
+                      target.style.display = 'none';
+                    }
+                  }}
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+                {/* Fallback placeholder */}
+                <div className="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none">
+                  <div className="text-8xl">🚗</div>
                 </div>
-                {car.seller_name && (
-                  <div>
-                    <strong>Seller:</strong> {car.seller_name}
-                  </div>
-                )}
-                {car.seller_phone && (
-                  <div>
-                    <strong>Phone:</strong> {car.seller_phone}
-                  </div>
-                )}
               </div>
-            </div>
+            </Card>
 
-            <div>
-              <h3 className="font-semibold mb-2">Specifications</h3>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <strong>Year:</strong> {car.year}
+            {/* Key Facts */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Key Facts</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className="flex items-center gap-3">
+                    <Calendar className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Year</p>
+                      <p className="font-semibold">{car.year}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Gauge className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Mileage</p>
+                      <p className="font-semibold">{car.mileage.toLocaleString()} mi</p>
+                    </div>
+                  </div>
+                  {car.drivetrain && (
+                    <div className="flex items-center gap-3">
+                      <Settings className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Drivetrain</p>
+                        <p className="font-semibold uppercase">{car.drivetrain}</p>
+                      </div>
+                    </div>
+                  )}
+                  {car.fuel_type && (
+                    <div className="flex items-center gap-3">
+                      <Fuel className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Fuel Type</p>
+                        <p className="font-semibold capitalize">{car.fuel_type}</p>
+                      </div>
+                    </div>
+                  )}
+                  {car.transmission && (
+                    <div className="flex items-center gap-3">
+                      <Settings className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Transmission</p>
+                        <p className="font-semibold capitalize">{car.transmission}</p>
+                      </div>
+                    </div>
+                  )}
+                  {car.mpg_city && car.mpg_highway && (
+                    <div className="flex items-center gap-3">
+                      <Fuel className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">MPG</p>
+                        <p className="font-semibold">{car.mpg_city}/{car.mpg_highway}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <strong>Mileage:</strong> {car.mileage.toLocaleString()} miles
-                </div>
-                {car.drivetrain && (
-                  <div>
-                    <strong>Drivetrain:</strong> {car.drivetrain.toUpperCase()}
+              </CardContent>
+            </Card>
+
+            {/* Features */}
+            {car.features && car.features.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Features</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2">
+                    {car.features.map((feature, idx) => (
+                      <Badge key={idx} variant="secondary">
+                        {feature.replace('_', ' ')}
+                      </Badge>
+                    ))}
                   </div>
-                )}
-                {car.fuel_type && (
-                  <div>
-                    <strong>Fuel:</strong> {car.fuel_type}
-                  </div>
-                )}
-                {car.transmission && (
-                  <div>
-                    <strong>Transmission:</strong> {car.transmission}
-                  </div>
-                )}
-                {car.engine && (
-                  <div>
-                    <strong>Engine:</strong> {car.engine}
-                  </div>
-                )}
-                {car.seats && (
-                  <div>
-                    <strong>Seats:</strong> {car.seats}
-                  </div>
-                )}
-                {car.doors && (
-                  <div>
-                    <strong>Doors:</strong> {car.doors}
-                  </div>
-                )}
-                {car.mpg_city && car.mpg_highway && (
-                  <div>
-                    <strong>MPG:</strong> {car.mpg_city} city / {car.mpg_highway} hwy
-                  </div>
-                )}
-                {car.color && (
-                  <div>
-                    <strong>Color:</strong> {car.color}
-                  </div>
-                )}
-                {car.vin && (
-                  <div>
-                    <strong>VIN:</strong> {car.vin}
-                  </div>
-                )}
-              </div>
-            </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
-          {car.features && car.features.length > 0 && (
-            <div className="mb-6">
-              <h3 className="font-semibold mb-2">Features</h3>
-              <div className="flex flex-wrap gap-2">
-                {car.features.map((feature, idx) => (
-                  <span
-                    key={idx}
-                    className="px-3 py-1 bg-blue-100 text-blue-800 rounded"
-                  >
-                    {feature.replace('_', ' ')}
-                  </span>
-                ))}
-              </div>
+          {/* Sticky Sidebar */}
+          <div className="lg:col-span-1">
+            <div className="sticky top-20">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-3xl">{price}</CardTitle>
+                  <p className="text-muted-foreground">
+                    {car.year} {car.make} {car.model}
+                    {car.trim && <span> {car.trim}</span>}
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <MapPin className="h-4 w-4" />
+                    {car.city}, {car.state}
+                  </div>
+                  
+                  <div className="pt-4 space-y-2">
+                    <Button
+                      onClick={() => setShowChatbot(true)}
+                      className="w-full"
+                      size="lg"
+                    >
+                      Book a Test Drive
+                    </Button>
+                    <Link href="/">
+                      <Button variant="outline" className="w-full">
+                        Continue Shopping
+                      </Button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          )}
-
-          {car.description && (
-            <div className="mb-6">
-              <h3 className="font-semibold mb-2">Description</h3>
-              <p className="text-gray-700">{car.description}</p>
-            </div>
-          )}
-
-          <div className="flex gap-4">
-            <button
-              onClick={() => setShowChatbot(true)}
-              className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold"
-            >
-              Book a Test Drive
-            </button>
-            <Link
-              href="/"
-              className="px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
-            >
-              Continue Shopping
-            </Link>
           </div>
         </div>
       </div>
@@ -377,7 +397,6 @@ export default function CarDetailPage() {
           onClose={() => setShowChatbot(false)}
         />
       )}
-    </div>
+    </AppLayout>
   );
 }
-

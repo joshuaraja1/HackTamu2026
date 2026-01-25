@@ -1,4 +1,4 @@
-# 🚗 Car Marketplace - AI-Powered Recommendation Engine
+# 🚗 RideIQ - AI-Powered Recommendation Engine
 
 A complete e-commerce recommendation engine for a car marketplace that ensures every search returns meaningful results, even when inventory is limited or constraints are strict. Built for Toyota's challenge at HackTamu 2026.
 
@@ -82,7 +82,7 @@ SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 RESEND_API_KEY=re_your_api_key_here
 # For testing, use onboarding@resend.dev (works immediately)
 # For production, use your verified domain
-RESEND_FROM_EMAIL=Car Marketplace <onboarding@resend.dev>
+RESEND_FROM_EMAIL=RideIQ <onboarding@resend.dev>
 ```
 
 ### 5. Run Database Migrations

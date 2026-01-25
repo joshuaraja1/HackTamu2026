@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
   <div style="background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-    <h1 style="color: white; margin: 0; font-size: 28px;">🚗 Test Drive Confirmed!</h1>
+    <h1 style="color: white; margin: 0; font-size: 28px;">🚗 RideIQ - Test Drive Confirmed!</h1>
   </div>
   
   <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
     
     <p style="font-size: 16px; margin-top: 20px; color: #6b7280;">
       Best regards,<br>
-      <strong>The Car Marketplace Team</strong>
+      <strong>The RideIQ Team</strong>
     </p>
   </div>
   
@@ -149,17 +149,17 @@ Test Drive Details:
 Our team will contact you shortly to confirm the details and provide you with the exact location for your test drive.
 
 Best regards,
-The Car Marketplace Team
+The RideIQ Team
     `;
 
     // Send email using Resend
     console.log('Sending email via Resend...');
-    console.log('From:', process.env.RESEND_FROM_EMAIL || 'Car Marketplace <onboarding@resend.dev>');
+    console.log('From:', process.env.RESEND_FROM_EMAIL || 'RideIQ <onboarding@resend.dev>');
     console.log('To:', userEmail);
     console.log('API Key present:', !!apiKey);
     console.log('API Key length:', apiKey?.length);
 
-    const fromEmail = process.env.RESEND_FROM_EMAIL || 'Car Marketplace <onboarding@resend.dev>';
+    const fromEmail = process.env.RESEND_FROM_EMAIL || 'RideIQ <onboarding@resend.dev>';
     
     const { data, error } = await resend.emails.send({
       from: fromEmail,

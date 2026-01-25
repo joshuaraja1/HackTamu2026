@@ -35,21 +35,21 @@ export default function Filters({ filters, onFiltersChange, userLocation }: Filt
   ].filter(Boolean).length;
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden sticky top-20">
+    <div className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden sticky top-20">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex justify-between items-center px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 transition-colors"
+        className="w-full flex justify-between items-center px-6 py-4 bg-muted/50 hover:bg-muted transition-colors"
       >
         <div className="flex items-center gap-2">
-          <span className="font-semibold text-gray-800">Filters</span>
+          <span className="font-semibold text-foreground">Filters</span>
           {activeFilterCount > 0 && (
-            <span className="bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+            <span className="bg-primary text-primary-foreground text-xs font-bold px-2 py-0.5 rounded-full">
               {activeFilterCount}
             </span>
           )}
         </div>
         <svg
-          className={`w-5 h-5 text-gray-600 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          className={`w-5 h-5 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -63,7 +63,7 @@ export default function Filters({ filters, onFiltersChange, userLocation }: Filt
           {activeFilterCount > 0 && (
             <button
               onClick={clearFilters}
-              className="w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="w-full px-4 py-2 text-sm text-muted-foreground hover:text-foreground border border-input rounded-lg hover:bg-muted transition-colors"
             >
               Clear All Filters
             </button>
@@ -71,7 +71,7 @@ export default function Filters({ filters, onFiltersChange, userLocation }: Filt
 
           {/* Budget */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">💰 Budget</label>
+            <label className="block text-sm font-semibold text-foreground mb-2">💰 Budget</label>
             <div className="flex gap-2">
               <div className="flex-1">
                 <input
@@ -81,7 +81,7 @@ export default function Filters({ filters, onFiltersChange, userLocation }: Filt
                   onChange={(e) =>
                     updateFilter('budgetMin', e.target.value ? parseInt(e.target.value) * 100 : undefined)
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-input bg-background rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
                 />
               </div>
               <div className="flex-1">
@@ -92,7 +92,7 @@ export default function Filters({ filters, onFiltersChange, userLocation }: Filt
                   onChange={(e) =>
                     updateFilter('budgetMax', e.target.value ? parseInt(e.target.value) * 100 : undefined)
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-input bg-background rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
                 />
               </div>
             </div>
@@ -100,7 +100,7 @@ export default function Filters({ filters, onFiltersChange, userLocation }: Filt
 
           {/* Year */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">📅 Year</label>
+            <label className="block text-sm font-semibold text-foreground mb-2">📅 Year</label>
             <div className="flex gap-2">
               <input
                 type="number"
@@ -109,7 +109,7 @@ export default function Filters({ filters, onFiltersChange, userLocation }: Filt
                 onChange={(e) =>
                   updateFilter('yearMin', e.target.value ? parseInt(e.target.value) : undefined)
                 }
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="flex-1 px-3 py-2 border border-input bg-background rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
               />
               <input
                 type="number"
@@ -118,14 +118,14 @@ export default function Filters({ filters, onFiltersChange, userLocation }: Filt
                 onChange={(e) =>
                   updateFilter('yearMax', e.target.value ? parseInt(e.target.value) : undefined)
                 }
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="flex-1 px-3 py-2 border border-input bg-background rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
               />
             </div>
           </div>
 
           {/* Mileage */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">🛣️ Max Mileage</label>
+            <label className="block text-sm font-semibold text-foreground mb-2">🛣️ Max Mileage</label>
             <input
               type="number"
               placeholder="Miles"
@@ -133,13 +133,13 @@ export default function Filters({ filters, onFiltersChange, userLocation }: Filt
               onChange={(e) =>
                 updateFilter('mileageMax', e.target.value ? parseInt(e.target.value) : undefined)
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-input bg-background rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
             />
           </div>
 
           {/* Location */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">📍 Location</label>
+            <label className="block text-sm font-semibold text-foreground mb-2">📍 Location</label>
             <input
               type="text"
               placeholder="City (e.g., Dallas, Austin, Houston)"
@@ -177,7 +177,7 @@ export default function Filters({ filters, onFiltersChange, userLocation }: Filt
                 
                 onFiltersChange(updatedFilters);
               }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-2"
+              className="w-full px-3 py-2 border border-input bg-background rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent mb-2"
             />
             <input
               type="number"
@@ -186,16 +186,16 @@ export default function Filters({ filters, onFiltersChange, userLocation }: Filt
               onChange={(e) =>
                 updateFilter('radiusMiles', e.target.value ? parseInt(e.target.value) : undefined)
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-input bg-background rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
             />
             {filters.city && (
-              <p className="text-xs text-gray-500 mt-1">📍 Searching near {filters.city}</p>
+              <p className="text-xs text-muted-foreground mt-1">📍 Searching near {filters.city}</p>
             )}
           </div>
 
           {/* Make */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">🏭 Make</label>
+            <label className="block text-sm font-semibold text-foreground mb-2">🏭 Make</label>
             <div className="flex flex-wrap gap-2">
               {['Toyota', 'Honda', 'Ford', 'Tesla', 'BMW', 'Hyundai', 'Kia', 'Mazda'].map(make => (
                 <button
@@ -203,8 +203,8 @@ export default function Filters({ filters, onFiltersChange, userLocation }: Filt
                   onClick={() => toggleArrayFilter('make', make)}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                     filters.make?.includes(make)
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-primary text-primary-foreground shadow-md'
+                      : 'bg-muted text-muted-foreground hover:bg-muted/80'
                   }`}
                 >
                   {make}
@@ -215,7 +215,7 @@ export default function Filters({ filters, onFiltersChange, userLocation }: Filt
 
           {/* Body Type */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">🚙 Body Type</label>
+            <label className="block text-sm font-semibold text-foreground mb-2">🚙 Body Type</label>
             <div className="flex flex-wrap gap-2">
               {['sedan', 'suv', 'truck', 'coupe', 'hatchback', 'wagon'].map(type => (
                 <button
@@ -223,8 +223,8 @@ export default function Filters({ filters, onFiltersChange, userLocation }: Filt
                   onClick={() => toggleArrayFilter('bodyType', type)}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium capitalize transition-all ${
                     filters.bodyType?.includes(type)
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-primary text-primary-foreground shadow-md'
+                      : 'bg-muted text-muted-foreground hover:bg-muted/80'
                   }`}
                 >
                   {type}
@@ -235,7 +235,7 @@ export default function Filters({ filters, onFiltersChange, userLocation }: Filt
 
           {/* Drivetrain */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">⚙️ Drivetrain</label>
+            <label className="block text-sm font-semibold text-foreground mb-2">⚙️ Drivetrain</label>
             <div className="flex flex-wrap gap-2">
               {['fwd', 'rwd', 'awd', '4wd'].map(dt => (
                 <button
@@ -243,8 +243,8 @@ export default function Filters({ filters, onFiltersChange, userLocation }: Filt
                   onClick={() => toggleArrayFilter('drivetrain', dt.toLowerCase())}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium uppercase transition-all ${
                     filters.drivetrain?.includes(dt.toLowerCase())
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-primary text-primary-foreground shadow-md'
+                      : 'bg-muted text-muted-foreground hover:bg-muted/80'
                   }`}
                 >
                   {dt}
@@ -255,7 +255,7 @@ export default function Filters({ filters, onFiltersChange, userLocation }: Filt
 
           {/* Fuel Type */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">⛽ Fuel Type</label>
+            <label className="block text-sm font-semibold text-foreground mb-2">⛽ Fuel Type</label>
             <div className="flex flex-wrap gap-2">
               {['gas', 'hybrid', 'electric', 'diesel'].map(ft => (
                 <button
@@ -263,8 +263,8 @@ export default function Filters({ filters, onFiltersChange, userLocation }: Filt
                   onClick={() => toggleArrayFilter('fuelType', ft)}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium capitalize transition-all ${
                     filters.fuelType?.includes(ft)
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-primary text-primary-foreground shadow-md'
+                      : 'bg-muted text-muted-foreground hover:bg-muted/80'
                   }`}
                 >
                   {ft}
@@ -275,7 +275,7 @@ export default function Filters({ filters, onFiltersChange, userLocation }: Filt
 
           {/* Seats */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">💺 Min Seats</label>
+            <label className="block text-sm font-semibold text-foreground mb-2">💺 Min Seats</label>
             <input
               type="number"
               min="2"
@@ -284,13 +284,13 @@ export default function Filters({ filters, onFiltersChange, userLocation }: Filt
               onChange={(e) =>
                 updateFilter('seats', e.target.value ? parseInt(e.target.value) : undefined)
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-input bg-background rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
             />
           </div>
 
           {/* Features */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">✨ Features</label>
+            <label className="block text-sm font-semibold text-foreground mb-2">✨ Features</label>
             <div className="flex flex-wrap gap-2">
               {['CarPlay', 'heated_seats', 'lane_assist', 'adaptive_cruise', 'sunroof', 'third_row'].map(feature => (
                 <button
@@ -298,8 +298,8 @@ export default function Filters({ filters, onFiltersChange, userLocation }: Filt
                   onClick={() => toggleArrayFilter('features', feature)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                     filters.features?.includes(feature)
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-primary text-primary-foreground shadow-md'
+                      : 'bg-muted text-muted-foreground hover:bg-muted/80'
                   }`}
                 >
                   {feature.replace('_', ' ')}

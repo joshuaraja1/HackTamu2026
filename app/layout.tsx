@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { CompareProvider } from './context/CompareContext';
+import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
-  title: 'Toyota Car Marketplace',
-  description: 'E-commerce recommendation engine for car marketplace',
+  title: 'RideIQ - AI-Powered Car Recommendations',
+  description: 'Find your perfect car with AI-powered recommendations. Search, compare, and discover the best deals.',
 };
 
 export default function RootLayout({
@@ -13,10 +14,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>
         <CompareProvider>
           {children}
+          <Toaster />
         </CompareProvider>
       </body>
     </html>

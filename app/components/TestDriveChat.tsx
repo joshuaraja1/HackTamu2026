@@ -34,9 +34,14 @@ export default function TestDriveChat({ carName, onClose }: { carName?: string; 
   const [isComplete, setIsComplete] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const initializedRef = useRef(false);
 
-  // Initialize with welcome message
+  // Initialize with welcome message (only once)
   useEffect(() => {
+    // Prevent duplicate initialization
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+    
     const welcomeMessage = carName 
       ? `Hi! I can help you book a test drive for the ${carName}. Let's get started!`
       : 'Hi! I can help you book a test drive. Let\'s get started!';
