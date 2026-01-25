@@ -1,78 +1,94 @@
-# Toyota Car Marketplace - Recommendation Engine
+# 🚗 Car Marketplace - AI-Powered Recommendation Engine
 
-A complete e-commerce recommendation engine for a car marketplace that ensures every search returns meaningful results, even when inventory is limited or constraints are strict.
+A complete e-commerce recommendation engine for a car marketplace that ensures every search returns meaningful results, even when inventory is limited or constraints are strict. Built for Toyota's challenge at HackTamu 2026.
 
-## Features
+## ✨ Features
 
+### Core Recommendation Engine
 - **Semantic Search**: Inventory-aware search using pgvector embeddings
 - **Personalization**: Recommendations based on user behavior and preferences
 - **Constraint Relaxation**: Progressive relaxation with explicit rationale when results are limited
 - **Zero-Match Fallbacks**: Always returns results with comparables, nearby deals, and best available options
 - **Budget & Location Awareness**: Filters and ranks by price and proximity
 
-## Tech Stack
+### User Features
+- **Smart Search**: Natural language search queries (e.g., "AWD family SUV under 25k Dallas")
+- **Advanced Filtering**: Filter by make, model, year, price, mileage, drivetrain, fuel type, transmission, seats, features, and location
+- **Compare Feature**: Add up to 4 cars to compare with:
+  - Detailed metrics comparison table
+  - Visual charts (Price, MPG, Mileage, Overall Radar)
+  - AI-powered analysis and recommendations
+- **Car Details**: View detailed information about each car
+- **Favorites**: Save cars you're interested in
 
-- **Next.js 14+** (App Router) with TypeScript
-- **Supabase Postgres** with pgvector extension
-- **Supabase Auth** for user authentication
-- **Tailwind CSS** for styling
-- **@xenova/transformers** for embeddings (with hashed fallback)
+## 🛠 Tech Stack
 
-## Prerequisites
+- **Frontend**: Next.js 14+ (App Router) with TypeScript, React 18
+- **Backend**: Next.js API Routes (Route Handlers)
+- **Database**: Supabase Postgres with pgvector extension
+- **Authentication**: Supabase Auth
+- **Styling**: Tailwind CSS
+- **Charts**: Recharts
+- **Embeddings**: @xenova/transformers (with hashed fallback)
+- **Data Processing**: csv-parse for vehicle data ingestion
 
-- Node.js 18+ and pnpm (or npm/yarn)
+## 📋 Prerequisites
+
+- Node.js 18+ 
+- pnpm (or npm/yarn)
 - Supabase account and project
 - PostgreSQL with pgvector extension enabled
 
-## Setup Instructions
+## 🚀 Quick Start
 
-### 1. Create Supabase Project
+### 1. Clone the Repository
 
-1. Go to [Supabase Dashboard](https://supabase.com/dashboard)
-2. Create a new project
-3. Note your project URL and API keys
-
-### 2. Enable pgvector Extension
-
-In your Supabase SQL Editor, run:
-
-```sql
-CREATE EXTENSION IF NOT EXISTS vector;
+```bash
+git clone https://github.com/joshuaraja1/HackTamu2026.git
+cd HackTamu2026
 ```
 
-### 3. Set Environment Variables
+### 2. Install Dependencies
 
-Copy `.env.example` to `.env.local` and fill in your Supabase credentials:
+```bash
+pnpm install
+```
+
+### 3. Set Up Supabase
+
+1. Create a new project at [Supabase Dashboard](https://supabase.com/dashboard)
+2. Enable the `vector` extension in SQL Editor:
+   ```sql
+   CREATE EXTENSION IF NOT EXISTS vector;
+   ```
+
+### 4. Configure Environment Variables
+
+Copy `.env.example` to `.env.local`:
 
 ```bash
 cp .env.example .env.local
 ```
 
-Edit `.env.local`:
+Edit `.env.local` with your Supabase credentials:
 
-```
+```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 ```
 
-### 4. Run Database Migrations
+### 5. Run Database Migrations
 
-Option A: Using Supabase SQL Editor (Recommended for first-time setup)
+**Option A: Using Supabase SQL Editor (Recommended)**
 
 1. Open Supabase SQL Editor
-2. Copy and paste the contents of `supabase/migrations/001_init.sql` (or `000_complete_setup.sql` for all-in-one)
-3. Run the migration
-4. Copy and paste the contents of `supabase/migrations/002_rls.sql`
-5. Run the RLS policies
-6. Copy and paste the contents of `supabase/migrations/003_match_function.sql`
-7. Run the match function
-8. **NEW**: Copy and paste the contents of `supabase/migrations/005_vehicles_master.sql`
-9. Run the vehicles master schema
-10. Copy and paste the contents of `supabase/migrations/006_vehicles_rls.sql`
-11. Run the vehicles RLS policies
+2. Run `supabase/migrations/005_vehicles_master.sql` (creates vehicles_master and listings tables)
+3. Run `supabase/migrations/006_vehicles_rls.sql` (sets up RLS policies)
+4. Run `supabase/migrations/003_match_function.sql` (creates pgvector match function)
+5. Run `supabase/migrations/004_vector_index.sql` (creates vector index for performance)
 
-Option B: Using Supabase CLI
+**Option B: Using Supabase CLI**
 
 ```bash
 supabase init
@@ -80,110 +96,32 @@ supabase link --project-ref your-project-ref
 supabase db push
 ```
 
-### 5. Install Dependencies
+### 6. Import Vehicle Data
+
+The project includes a real vehicle dataset (`all-vehicles-model.csv`) with 47,000+ vehicle models.
+
+**Import vehicles and generate listings:**
 
 ```bash
-pnpm install
-```
+# Import vehicles from CSV
+pnpm run import:vehicles
 
-**Note**: The `csv-parse` package is required for importing vehicle data. It should be installed automatically.
+# Generate synthetic marketplace listings
+pnpm run gen:listings
 
-### 6. Import Real Vehicle Data (NEW)
+# (Optional) Seed demo users and interactions
+pnpm run seed:demo
 
-This project now supports importing real vehicle data from a CSV file and generating synthetic marketplace listings.
-
-#### 6a. Download Vehicle Dataset
-
-Download the vehicle dataset CSV file:
-- URL: https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/all-vehicles-model/exports/csv?lang=en&timezone=America%2FChicago&use_labels=true&delimiter=%3B
-- Save it as `all-vehicles-model.csv` in the project root directory
-
-#### 6b. Run Data Ingestion Pipeline
-
-Run the complete data ingestion pipeline (imports vehicles, generates listings, and seeds demo users):
-
-```bash
+# Or run all at once:
 pnpm run seed:all
 ```
 
-This single command will:
-1. Import vehicles from `all-vehicles-model.csv` into `vehicles_master` table
-2. Generate synthetic marketplace listings (1-5 per vehicle)
-3. Create 300 demo users with 25,000 interactions
+This will:
+- Import ~43,000 vehicles from the CSV into `vehicles_master`
+- Generate ~60,000+ synthetic listings with realistic prices, mileage, locations, and features
+- Create demo users and interaction data for personalization testing
 
-**Individual commands** (if you want to run steps separately):
-
-```bash
-# Import vehicles only
-pnpm run import:vehicles
-
-# Generate listings only (requires vehicles to be imported first)
-pnpm run gen:listings
-
-# Seed demo users and interactions only
-pnpm run seed:demo
-```
-
-#### 6c. Verify Data
-
-After running the pipeline, verify the data in Supabase:
-
-```sql
--- Check vehicle count (should be tens of thousands after deduplication)
-SELECT COUNT(*) FROM vehicles_master;
-
--- Check listing count (should be 1-5 per vehicle)
-SELECT COUNT(*) FROM listings;
-
--- Check demo users
-SELECT COUNT(*) FROM demo_users;
-
--- Check interactions
-SELECT COUNT(*) FROM interactions_demo;
-```
-
-**Expected Results**:
-- `vehicles_master`: ~20,000-50,000 unique vehicles (after deduplication)
-- `listings`: ~30,000-150,000 listings (1-5 per vehicle)
-- `demo_users`: 300 users
-- `interactions_demo`: 25,000 interactions
-
-### 7. Generate Synthetic Data (Legacy - Optional)
-
-```bash
-pnpm run synth
-```
-
-This generates JSON files in the `data/` directory:
-- `cars.json` - 3,000 car listings
-- `users.json` - 300 user profiles
-- `interactions.json` - 25,000 interaction events
-
-### 8. Seed Database (Legacy - Optional)
-
-If you're using the legacy synthetic data generation:
-
-```bash
-pnpm run seed
-```
-
-This inserts the synthetic data into your Supabase database.
-
-**Note**: If you've already run `pnpm run seed:all`, you can skip this step as the new pipeline generates more realistic data.
-
-### 9. Generate Embeddings
-
-```bash
-pnpm run embed
-```
-
-This computes embeddings for all cars and stores them in the database. The script uses:
-- `@xenova/transformers` for transformer-based embeddings (if available)
-- Hashed embedding fallback (always works, deterministic)
-
-**Note**: The first run may take a while as it downloads the transformer model. Subsequent runs use cached models.
-
-### 10. Start Development Server
+### 7. Start Development Server
 
 ```bash
 pnpm dev
@@ -191,110 +129,91 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## Example Queries
-
-### 1. AWD Family SUV Under $25k Within 15 Miles
+## 📁 Project Structure
 
 ```
-AWD family SUV under 25k within 15 miles
-```
-
-This query should return relevant SUVs with AWD, within budget and radius. If results are limited, the system will progressively relax constraints.
-
-### 2. Manual Transmission Hybrid Under $15k (Zero-Match Scenario)
-
-```
-manual transmission hybrid under 15k within 10 miles
-```
-
-This query is designed to trigger zero-match fallbacks. The system will:
-- Relax radius
-- Relax price max
-- Show comparables (similar cars with automatic transmission)
-- Show nearby deals
-- Show best available options
-
-### 3. Personalization Demo
-
-1. Select a demo user from the dropdown (e.g., "User 1 (SUV Lover)")
-2. Enable personalization toggle
-3. Search for "family car"
-4. Note how results are ranked based on user preferences
-5. Switch to a different user and see how rankings change
-
-## Project Structure
-
-```
-/
+HackTamu2026/
 ├── app/
 │   ├── api/
-│   │   ├── recommend/route.ts    # Recommendation API endpoint
-│   │   └── track/route.ts         # Interaction tracking endpoint
-│   ├── car/[id]/page.tsx          # Car detail page
-│   ├── profile/page.tsx           # User profile page
-│   ├── components/                # React components
-│   │   ├── SearchBar.tsx
-│   │   ├── Filters.tsx
-│   │   ├── ResultsList.tsx
-│   │   ├── CarCard.tsx
-│   │   └── ExplainPanel.tsx
+│   │   ├── recommend/      # Recommendation API endpoint
+│   │   └── track/           # User interaction tracking
+│   ├── car/[id]/           # Car detail page
+│   ├── compare/             # Car comparison page
+│   ├── profile/             # User profile page
+│   ├── components/          # React components
+│   │   ├── CarCard.tsx      # Individual car card
+│   │   ├── ComparePanel.tsx # Compare panel (bottom bar)
+│   │   ├── Filters.tsx      # Filter sidebar
+│   │   ├── ResultsList.tsx  # Results display
+│   │   └── SearchBar.tsx    # Search input
+│   ├── context/
+│   │   └── CompareContext.tsx # Compare state management
 │   └── lib/
-│       ├── supabaseServer.ts      # Supabase client setup
-│       └── recommend/             # Recommendation engine
-│           ├── pipeline.ts        # Main recommendation pipeline
-│           ├── relaxation.ts     # Constraint relaxation logic
-│           ├── scoring.ts         # Ranking and scoring
-│           ├── comparables.ts     # Comparable car finder
-│           ├── geo.ts             # Location utilities
-│           ├── text.ts            # Text processing
-│           ├── embeddings.ts      # Embedding generation
-│           └── types.ts           # TypeScript types
+│       ├── recommend/       # Recommendation engine
+│       │   ├── pipeline.ts  # Main recommendation pipeline
+│       │   ├── queryParser.ts # Natural language parsing
+│       │   ├── embeddings.ts # Embedding generation
+│       │   ├── scoring.ts   # Ranking algorithms
+│       │   ├── relaxation.ts # Constraint relaxation
+│       │   └── ...
+│       └── supabaseServer.ts # Supabase client
 ├── scripts/
-│   ├── generate_synth.ts         # Generate synthetic data (legacy)
-│   ├── seed.ts                   # Seed database (legacy)
-│   ├── embed.ts                  # Generate embeddings
-│   ├── importVehicles.ts         # Import vehicles from CSV
-│   ├── generateListings.ts       # Generate synthetic listings
-│   ├── seedDemoUsers.ts          # Seed demo users and interactions
-│   └── runAll.ts                 # Run complete ingestion pipeline
+│   ├── importVehicles.ts    # Import CSV data
+│   ├── generateListings.ts  # Generate synthetic listings
+│   ├── seedDemoUsers.ts     # Seed demo data
+│   └── runAll.ts            # Run all scripts
 ├── supabase/
-│   └── migrations/               # Database migrations
-│       ├── 001_init.sql          # Schema creation (legacy)
-│       ├── 002_rls.sql           # Row Level Security
-│       ├── 003_match_function.sql # pgvector search function
-│       ├── 005_vehicles_master.sql # Vehicles master and listings schema
-│       └── 006_vehicles_rls.sql   # Vehicles RLS policies
-├── tests/                        # Test files
-└── package.json
+│   └── migrations/          # Database migrations
+├── tests/                    # Test files
+└── all-vehicles-model.csv    # Vehicle dataset (47K+ rows)
 ```
 
-## Recommendation Pipeline
+## 🎯 Usage Examples
 
-The recommendation engine uses a multi-stage approach:
+### Search Queries
 
-1. **Stage 0**: Strict filters + semantic search + personalization
-2. **Stage 1-6**: Progressive constraint relaxation if results < 8
-   - Stage 1: Expand radius (15 → 25 → 50 → 100 miles)
-   - Stage 2: Widen price max (+10%)
-   - Stage 3: Widen price max (+20%)
-   - Stage 4: Widen year range (±1 year)
-   - Stage 5: Widen mileage (+15%)
-   - Stage 6: Widen mileage (+30%)
-3. **Fallbacks**: If still insufficient results
-   - Comparables: Similar cars by body type, seats, price, MPG
-   - Nearby Deals: Best value cars in area
-   - Best Available: Top local inventory
+Try these natural language queries:
 
-### Ranking Formula
+- `"AWD family SUV under 25k within 15 miles"`
+- `"Toyota Camry 2020 under 25k AWD"`
+- `"reliable sedan with good gas mileage"`
+- `"luxury car with heated seats"`
 
+### Compare Cars
+
+1. Click the heart icon (❤️) on any car card to add it to compare
+2. Add up to 4 cars
+3. Click "View Comparison" in the bottom panel
+4. See detailed metrics, charts, and AI-powered analysis
+
+## 🔧 Available Scripts
+
+```bash
+# Development
+pnpm dev              # Start dev server
+pnpm build            # Build for production
+pnpm start            # Start production server
+
+# Data Management
+pnpm run import:vehicles    # Import vehicles from CSV
+pnpm run gen:listings       # Generate synthetic listings
+pnpm run seed:demo          # Seed demo users/interactions
+pnpm run seed:all           # Run all data scripts
+
+# Testing
+pnpm test             # Run tests
+pnpm test:watch       # Run tests in watch mode
 ```
-final_score = 0.45 * semantic_score
-            + 0.25 * constraint_score
-            + 0.20 * personal_score
-            + 0.10 * inventory_score
-```
 
-## Testing
+## 🧪 Testing
+
+The project includes comprehensive tests:
+
+- `tests/relaxation.test.ts` - Constraint relaxation logic
+- `tests/zeroMatch.test.ts` - Zero-match fallback scenarios
+- `tests/personalization.test.ts` - Personalization ranking
+- `tests/semantic.test.ts` - Semantic search
+- `tests/hardConstraints.test.ts` - Hard constraint enforcement
 
 Run tests with:
 
@@ -302,66 +221,49 @@ Run tests with:
 pnpm test
 ```
 
-Test coverage includes:
-- Constraint relaxation ordering
-- Zero-match fallback logic
-- Personalization scoring
-- Semantic search embeddings
-- Hard constraint enforcement
+## 📊 Database Schema
 
-## Database Schema
+### Main Tables
 
-### Tables
-
-**Legacy Tables** (from original synthetic data):
-- **cars**: Car inventory with vector embeddings
-- **users_profile**: User preferences and inferred profile
-- **interactions**: User behavior tracking (views, favorites, purchases)
-
-**New Tables** (from real vehicle data ingestion):
-- **vehicles_master**: Master vehicle specifications from CSV import
-- **listings**: Synthetic marketplace listings generated from vehicles_master
-- **demo_users**: Demo user profiles (for testing without auth)
-- **interactions_demo**: Demo user interactions (views, favorites, purchases)
+- **`vehicles_master`**: Master vehicle specifications (make, model, year, specs)
+- **`listings`**: Marketplace listings (price, mileage, location, features)
+- **`users_profile`**: User preferences and profiles
+- **`interactions_demo`**: User interaction history (views, favorites, purchases)
 
 ### Key Features
 
-- pgvector for semantic similarity search
-- Row Level Security (RLS) for data protection
-- Indexes optimized for common queries
-- JSONB for flexible feature storage
+- Vector embeddings stored in `vehicles_master.embedding` for semantic search
+- Full-text search on `search_text` column
+- Row Level Security (RLS) enabled on all tables
+- Optimized indexes for performance
 
-## Troubleshooting
+## 🎨 UI Features
 
-### Embeddings Not Working
+- **Modern Design**: Gradient backgrounds, smooth animations, responsive layout
+- **Smart Filters**: Collapsible filter panel with active filter count
+- **Visual Feedback**: Loading states, empty states, error handling
+- **Compare Panel**: Floating bottom panel showing compare cars
+- **Charts & Analysis**: Interactive charts for comparing cars
 
-If transformer embeddings fail, the system automatically falls back to hashed embeddings. This is deterministic and works offline.
+## 🔒 Security
 
-### No Results Returned
+- Row Level Security (RLS) enabled on all tables
+- Service role key only used server-side
+- Anon key used client-side with RLS enforcement
+- Environment variables for sensitive credentials
 
-1. Check that cars are seeded: `SELECT COUNT(*) FROM cars;`
-2. Check that embeddings are generated: `SELECT COUNT(*) FROM cars WHERE embedding IS NOT NULL;`
-3. Try relaxing filters or using a broader search query
+## 📝 License
 
-### RLS Errors
+This project was built for HackTamu 2026.
 
-Make sure you've run `002_rls.sql` to set up Row Level Security policies.
+## 🤝 Contributing
 
-### pgvector Errors
+This is a hackathon project. Feel free to fork and extend!
 
-Ensure the vector extension is enabled:
-```sql
-CREATE EXTENSION IF NOT EXISTS vector;
-```
+## 📧 Contact
 
-## Development Notes
+For questions or issues, please open an issue on GitHub.
 
-- The app uses service role key server-side to bypass RLS for admin operations
-- Client-side uses anon key and respects RLS
-- Embeddings are computed lazily (first search may be slower)
-- Personalization requires user interactions to build preference vectors
+---
 
-## License
-
-This project is built for Toyota's HackTamu 2026 challenge.
-
+**Built with ❤️ for Toyota's challenge at HackTamu 2026**
